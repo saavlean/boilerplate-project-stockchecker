@@ -4,7 +4,6 @@ require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors');
 const helmet = require('helmet');
 
 const apiRoutes = require('./routes/api.js');
@@ -12,6 +11,8 @@ const fccTestingRoutes = require('./routes/fcctesting.js');
 const runner = require('./test-runner');
 
 const app = express();
+
+app.disable('x-powered-by');
 
 app.use(
   helmet.contentSecurityPolicy({
@@ -25,7 +26,6 @@ app.use(
 );
 
 app.use('/public', express.static(process.cwd() + '/public'));
-app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 

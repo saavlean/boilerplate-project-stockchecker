@@ -10,6 +10,7 @@ const stockSchema = new mongoose.Schema({
   symbol: { type: String, required: true, unique: true },
   likes: { type: [String], default: [] }
 });
+
 const Stock = mongoose.model('Stock', stockSchema);
 
 function hashIP(ip) {
@@ -17,33 +18,52 @@ function hashIP(ip) {
 }
 
 async function getStockPrice(symbol) {
-  const url = `https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/${symbol}/quote`;
-  const res = await fetch(url);
-  const data = await res.json();
+  const cleanSymbol = symbol.toUpperCase();
+
+  const url =
+    `https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/${cleanSymbol}/quote`;
+
+  const response = await fetch(url);
+  const data = await response.json();
+
   return {
-    symbol: symbol.toUpperCase(),
-    price: data.latestPrice
+    symbol: cleanSymbol,
+    price: Number(data.latestPrice)
   };
 }
 
-module.exports = function(app) {
+module.exports = function (app) {
 
   app.route('/api/stock-prices')
-    .get(async function(req, res) {
+    .get(async function (req, res) {
+
       try {
+
         const { stock, like } = req.query;
         const ip = hashIP(req.ip);
 
+        // =====================================================
+        // SINGLE STOCK
+        // =====================================================
+
         if (typeof stock === 'string') {
+
           const { symbol, price } = await getStockPrice(stock);
 
           let stockDoc = await Stock.findOneAndUpdate(
             { symbol },
             { $setOnInsert: { symbol, likes: [] } },
-            { upsert: true, new: true }
+            {
+              upsert: true,
+              new: true
+            }
           );
 
-          if (like === 'true' && !stockDoc.likes.includes(ip)) {
+          if (
+            like === 'true' &&
+            !stockDoc.likes.includes(ip)
+          ) {
+
             stockDoc = await Stock.findOneAndUpdate(
               { symbol },
               { $push: { likes: ip } },
@@ -54,42 +74,59 @@ module.exports = function(app) {
           return res.json({
             stockData: {
               stock: symbol,
-              price: price,
-              likes: stockDoc.likes.length
+              price: Number(price),
+              likes: Number(stockDoc.likes.length)
             }
           });
         }
 
+        // =====================================================
+        // TWO STOCKS
+        // =====================================================
+
         if (Array.isArray(stock) && stock.length === 2) {
-          const [data1, data2] = await Promise.all([
+
+          const [stock1, stock2] = await Promise.all([
             getStockPrice(stock[0]),
             getStockPrice(stock[1])
           ]);
 
           let [doc1, doc2] = await Promise.all([
+
             Stock.findOneAndUpdate(
-              { symbol: data1.symbol },
-              { $setOnInsert: { symbol: data1.symbol, likes: [] } },
-              { upsert: true, new: true }
+              { symbol: stock1.symbol },
+              { $setOnInsert: { symbol: stock1.symbol, likes: [] } },
+              {
+                upsert: true,
+                new: true
+              }
             ),
+
             Stock.findOneAndUpdate(
-              { symbol: data2.symbol },
-              { $setOnInsert: { symbol: data2.symbol, likes: [] } },
-              { upsert: true, new: true }
+              { symbol: stock2.symbol },
+              { $setOnInsert: { symbol: stock2.symbol, likes: [] } },
+              {
+                upsert: true,
+                new: true
+              }
             )
           ]);
 
           if (like === 'true') {
+
             if (!doc1.likes.includes(ip)) {
+
               doc1 = await Stock.findOneAndUpdate(
-                { symbol: data1.symbol },
+                { symbol: stock1.symbol },
                 { $push: { likes: ip } },
                 { new: true }
               );
             }
+
             if (!doc2.likes.includes(ip)) {
+
               doc2 = await Stock.findOneAndUpdate(
-                { symbol: data2.symbol },
+                { symbol: stock2.symbol },
                 { $push: { likes: ip } },
                 { new: true }
               );
@@ -99,24 +136,34 @@ module.exports = function(app) {
           return res.json({
             stockData: [
               {
-                stock: data1.symbol,
-                price: data1.price,
-                rel_likes: doc1.likes.length - doc2.likes.length
+                stock: stock1.symbol,
+                price: Number(stock1.price),
+                rel_likes:
+                  Number(doc1.likes.length) -
+                  Number(doc2.likes.length)
               },
               {
-                stock: data2.symbol,
-                price: data2.price,
-                rel_likes: doc2.likes.length - doc1.likes.length
+                stock: stock2.symbol,
+                price: Number(stock2.price),
+                rel_likes:
+                  Number(doc2.likes.length) -
+                  Number(doc1.likes.length)
               }
             ]
           });
         }
 
-        res.status(400).json({ error: 'Invalid stock parameter' });
+        return res.status(400).json({
+          error: 'Invalid stock parameter'
+        });
 
       } catch (err) {
+
         console.error(err);
-        res.status(500).json({ error: 'Server error' });
+
+        return res.status(500).json({
+          error: 'Server error'
+        });
       }
     });
 };

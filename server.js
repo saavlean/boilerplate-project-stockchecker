@@ -10,7 +10,7 @@ const runner = require('./test-runner');
 const app = express();
 
 app.use((req, res, next) => {
-  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'");
+  res.setHeader("Content-Security-Policy", "default-src 'self'");
   next();
 });
 

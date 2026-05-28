@@ -4,7 +4,6 @@ require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const helmet = require('helmet');
 
 const apiRoutes = require('./routes/api.js');
 const fccTestingRoutes = require('./routes/fcctesting.js');
@@ -14,16 +13,13 @@ const app = express();
 
 app.disable('x-powered-by');
 
-app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'"],
-      connectSrc: ["'self'"]
-    }
-  })
-);
+app.use(function (req, res, next) {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self'"
+  );
+  next();
+});
 
 app.use('/public', express.static(process.cwd() + '/public'));
 app.use(bodyParser.json());
@@ -55,3 +51,4 @@ const listener = app.listen(process.env.PORT || 3000, function () {
 });
 
 module.exports = app;
+

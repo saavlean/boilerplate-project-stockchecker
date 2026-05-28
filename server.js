@@ -10,6 +10,11 @@ const runner = require('./test-runner');
 
 const app = express();
 
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+
 app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: false,

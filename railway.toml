@@ -3,3 +3,6 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "node server.js"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["nodejs_20"]

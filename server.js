@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const apiRoutes = require('./routes/api.js');
 const fccTestingRoutes = require('./routes/fcctesting.js');
@@ -11,7 +12,7 @@ const runner = require('./test-runner');
 
 const app = express();
 
-app.disable('x-powered-by');
+app.use(cors({ origin: '*' }));
 
 app.use(function (req, res, next) {
   res.setHeader(
@@ -51,4 +52,3 @@ const listener = app.listen(process.env.PORT || 3000, function () {
 });
 
 module.exports = app;
-
